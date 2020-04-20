@@ -1,0 +1,24 @@
+library(dplyr)
+library(C50)
+library(e1071)
+data("iris")
+iris.subset<-subset(iris,select=c("Sepal.Length","Sepal.Width","Species"),Species%in%c("setosa","virginica"))
+plot(x=iris.subset$Sepal.Length,y=iris.subset$Sepal.Width,col=iris.subset$Species,pch=19)
+
+svm.model <- svm(Species~., data = iris.subset, kernel = 'linear', cost = 1, scale =F)
+points(iris.subset[svm.model$index,c(1,2)],col="blue",cex=2)
+w=t(svm.model$coefs)%*%svm.model$SV
+b=-svm.model$rho
+abline(a=-b/w[1,2],b=-w[1,1]/w[1,2],col="red",lty=5)
+
+plot(x=iris.subset$Sepal.Length,y=iris.subset$Sepal.Width,col=iris.subset$Species,pch=19)
+svm.model<-svm(Species~.,data = iris.subset,kernel="linear",cost=1000,scale = F,type='C-classification')
+points(iris.subset[svm.model$index,c(1,2)],col="blue",cex=2)
+w=t(svm.model$coefs)%*%svm.model$SV
+b=-svm.model$rho
+abline(a=-b/w[1,2],b=-w[1,1]/w[1,2],col="red",lty=5)
+
+data("iris")
+model.iris<-svm(Species~.,data=iris)
+plot(model.iris,iris,Petal.Width~Petal.Length,slice=list(Sepal.Width=3,Sepal.Length=4))
+

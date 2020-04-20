@@ -1,0 +1,23 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1586744571782.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "0|24|22|0|\n23|40|120|0|\n121|54|154|0|\n155|49|214|0|\n",
+    "hash" : "3364675016",
+    "id" : "469853E6",
+    "lastKnownWriteTime" : 1587266577,
+    "last_content_update" : 1587266577322,
+    "path" : "D:/Rproject/Abuser/drugs-cluster-analysis.R",
+    "project_path" : "drugs-cluster-analysis.R",
+    "properties" : {
+        "cursorPosition" : "278,25",
+        "scrollLine" : "274",
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 2,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

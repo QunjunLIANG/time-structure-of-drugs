@@ -1,0 +1,143 @@
+#load the orignal data
+Drug <- readr::read_csv("abuserR.csv")
+Drug <- Drug[, -93]
+dim(Drug)
+View(Drug)
+head(Drug)
+#detect the Missing value
+library(mice)
+md.pattern(Drug)
+Drug_rev <- t(Drug)
+View(Drug_rev)
+class(Drug_rev)
+install.packages("VIM")
+library(VIM)
+aggr(Drug_rev, 
+     sortVars = TRUE, 
+     sortCombs = TRUE,
+     border = NA)
+#delete the subject missing more than 15%
+Data1 <- Drug[-c(99, 100, 173, 80, 33, 2, 106, 166, 7, 150), ]
+View(Data1)
+dim(Data1)
+dim(Drug)
+#Use mice to complete the data
+clu.data <- Data1[, 2:83]
+library(mice)
+mis.clu.data <- mice(clu.data)
+View(mis.clu.data)
+comp.mis.data <- complete(mis.clu.data)
+anyNA(comp.mis.data)
+clu.data2 <- comp.mis.data
+Data2 <- data.frame(Data1[, 1], clu.data2, Data1[, 84:92])
+View(Data2)
+#Calculate the score of dimensions
+library(dplyr)
+library(tidyverse)
+Data2 %>%
+  select(PMP1, PMP5, PMP16) %>%
+  rowSums()-> achi
+Data2 %>%
+  select(PMP7, PMP8, PMP13) %>%
+  rowSums()-> rela
+Data2 %>%
+  select(PMP4, PMP9, PMP18) %>%
+  rowSums()-> reli
+Data2 %>%
+  select(PMP11, PMP15, PMP21) %>%
+  rowSums()-> self_ac 
+Data2 %>%
+  select(PMP1, PMP3, PMP17) %>%
+  rowSums()-> self_tr
+Data2 %>%
+  select(PMP2, PMP12, PMP14) %>%
+  rowSums()-> inti
+Data2 %>%
+  select(PMP10, PMP19, PMP20) %>%
+  rowSums()-> fair
+Data2 %>%
+  select(starts_with("P")) %>%
+  rowSums() -> PMP
+### next come in the ZTPI
+Data2 %>%
+  select(ZIPI4, ZIPI5, ZIPI16, ZIPI22, ZIPI27,
+         ZIPI33, ZIPI34, ZIPI36, ZIPI50, ZIPI54) %>%
+  rowSums()-> Neg_past
+Data2 %>%
+  select(ZIPI2, ZIPI7, ZIPI11, ZIPI15, ZIPI20, 
+         ZIPI25, ZIPI29, ZIPI41, ZIPI49) %>%
+  rowSums()-> Pos_past
+Data2 %>%
+  select(ZIPI1, ZIPI8, ZIPI12, ZIPI17, ZIPI19, 
+         ZIPI23, ZIPI26, ZIPI28, ZIPI31, ZIPI32, 
+         ZIPI42, ZIPI46, ZIPI48, ZIPI55) %>%
+  rowSums()-> Hed_now
+Data2 %>%
+  select(ZIPI3, ZIPI14, ZIPI35, ZIPI37, ZIPI38, ZIPI39, 
+         ZIPI47, ZIPI52, ZIPI53) %>%
+  rowSums()-> Fate_now
+Data2 %>%
+  select(ZIPI6, ZIPI9, ZIPI10, ZIPI13, ZIPI18, ZIPI21, 
+         ZIPI24, ZIPI30, ZIPI40, ZIPI43, ZIPI45, ZIPI51, ZIPI56) %>%
+  rowSums()-> Future
+##Now we are going to merge those data
+Data3 <- data.frame(Data2[, 1], Data2[, 85:92], 
+                    achi, rela, reli, self_ac, self_tr, inti, fair, PMP,
+                    Neg_past, Pos_past, Hed_now, Fate_now, Future)
+
+names(Data3$Data2...1.) <- c("ID")
+View(Data3)
+##cluster analysis
+s.clu.data <- scale(Data3[, 18:22])
+View(s.clu.data)
+library(NbClust)
+nc <- NbClust(s.clu.data,min.nc=2,max.nc=5,method = "kmeans")
+nc
+dev.off()
+ks <- kmeans(s.clu.data, centers = 3)
+ks
+str(ks)
+Data4 <- data.frame(Data3, ks$cluster)
+View(Data4)
+library(fpc)
+plotcluster(s.clu.data, ks$cluster) 
+###ploting the result of cluster analysis
+library(yarrr)
+library(sysfonts)
+font_add("heiti", "simhei.ttf")
+font_families()
+library(showtext)
+library(Cairo)
+Data4$ks.cluster[Data4$ks.cluster == "1"] <- "及时行乐型"
+Data4$ks.cluster[Data4$ks.cluster == "2"] <- "沉沦型"
+Data4$ks.cluster[Data4$ks.cluster == "3"] <- "平衡型"
+View(Data4)
+CairoPDF("cluster.pdf")
+showtext_begin()
+pirateplot(formula = PMP ~ ks.cluster, data = Data4,
+           pal = "southpark",
+           theme = 0,
+           point.o = 0.6,
+           avg.line.o = 1,
+           avg.line.lwd = 2,
+           avg.line.col = "black",
+           bar.b.o = 0,
+           bean.b.o = 1,
+           inf.f.o = 0.5,
+           inf.method = "sd",
+           ylab = "??????????",
+           xlab = "????")
+showtext_end()
+dev.off()
+
+# output the data for JASP use
+JASP_data <- Data4
+JASP_data$ks.cluster[JASP_data$ks.cluster == "及时行乐型"] <- "hedonism"
+JASP_data$ks.cluster[JASP_data$ks.cluster == "沉沦型"] <- "depression"
+JASP_data$ks.cluster[JASP_data$ks.cluster == "平衡型"] <- "balance"
+head(JASP_data)
+use_name <- colnames(JASP_data)
+use_name[1] <- "ID"
+use_name[23] <- "cluster"
+colnames(JASP_data) <- use_name
+write.csv(JASP_data, file = "JASP_abuser.csv", row.names = FALSE)

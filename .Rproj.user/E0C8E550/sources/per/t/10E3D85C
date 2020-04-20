@@ -1,0 +1,23 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1587053354626.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "2367858188",
+    "id" : "10E3D85C",
+    "lastKnownWriteTime" : 1587094731,
+    "last_content_update" : 1587094731307,
+    "path" : "C:/Users/liang/Desktop/elevator.R",
+    "project_path" : null,
+    "properties" : {
+        "cursorPosition" : "104,26",
+        "scrollLine" : "0",
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 3,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
