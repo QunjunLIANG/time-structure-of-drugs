@@ -234,6 +234,18 @@ drug.kmean <- kmeans(drug.scale[,10:14], centers = 2)
 plotcluster(drug.scale, drug.kmean$cluster) 
 drug.data['cluster'] <- ztpi.clust[["Best.partition"]]
 
+### Descriptive statistics of clustering result
+drug.cluster.describe <- data.frame(as.factor(drug.data$Marriage), as.factor(drug.data$Education), as.factor(drug.data$Job), drug.data[,20])
+colnames(drug.cluster.describe) <- c('marriage', 'education', 'job', 'cluster')
+drug.cluster.describe %>%
+  subset(cluster == '1') %>%
+  summary()
+drug.cluster.describe %>%
+  subset(cluster == '2') %>%
+  summary()
+# we find no difference among demographic variables
+# given the magnitude of two clusters are different, we just focused on the proportion of values
+
 ### Comparing the differences between categories
 ## Levene's test for variance equality
 leveneTest(pmp.total ~ as.factor(cluster), data = drug.data) # F = 5.52, p = 0.02, varance unequal
@@ -262,10 +274,17 @@ drug.cate1 <- drug.data[which(drug.data$cluster == 1), ]
 drug.cate2 <- drug.data[which(drug.data$cluster == 2), ]
 cor.dis1 <- 1 - cor(drug.cate1[,5:11], method = 'spearman')
 cor.dis2 <- 1 - cor(drug.cate2[,5:11], method = 'spearman') 
+
+CairoPDF("cluster1_RDM.pdf")
 lattice::levelplot(cor.dis1, main = "cor.matrix of cate 1")
+dev.off()
+
+CairoPDF("cluster2_RDM.pdf")
 lattice::levelplot(cor.dis2, main = "cor.matrix of cate 2")
+dev.off()
 
 rsa.cor <- cor(cor.dis1[upper.tri(cor.dis1, diag = F)], cor.dis2[upper.tri(cor.dis2, diag = F)], method = 'spearman')
+
 # set random seed for reproducible results
 set.seed(1)
 nperm <- 5000 # set permutation count
@@ -281,8 +300,10 @@ for (i in 1:nperm){
 }
 # calculate p-value
 mean(abs(permcor) > abs(cor(cor.dis1[upper.tri(cor.dis1, diag = F)], cor.dis2[upper.tri(cor.dis2, diag = F)], method = 'spearman')))
-hist(abs(permcor),xlim=c(0,.4),main="Permuted null versus actual correlation")
+CairoPDF("permutation-test.pdf")
+hist(abs(permcor),xlim=c(0,.8),main="Permuted null versus actual correlation")
 abline(v=abs(cor(cor.dis1[upper.tri(cor.dis1, diag = F)], cor.dis2[upper.tri(cor.dis2, diag = F)], method = 'spearman')),col="red",lwd=2)
+dev.off()
 
 CairoPDF("RDM_plot.pdf")
 lattice::levelplot(cor.dis1 - cor.dis2, main = "cor.matrix difference")
@@ -296,13 +317,13 @@ plot(rowMeans(t(drug.cate1[,5:11])), rowMeans(t(drug.cate2[,5:11])))
 cor(cor.dis1[upper.tri(cor.dis1, diag = F)], cor.dis2[upper.tri(cor.dis2, diag = F)])
 
 #### support vector machine classification ----
-# classification argrit
+### classification argrit
 drug.svm.data <- drug.data[,c(5:11,20)]
 drug.svm.data$cluster <- as.factor(drug.svm.data$cluster)
 
-# cross validation - 10 folds corss validation
+### cross validation - 10 folds corss validation
 folds = createFolds(drug.svm.data$cluster, k = 10)
-# start working!
+### start working!
 cv = lapply(folds, function(x) { 
   # separating apart the training & testing set
   train.fold = drug.svm.data[-x, ]
@@ -311,33 +332,44 @@ cv = lapply(folds, function(x) {
   svm.models = svm(formula = cluster ~ .,
                    data = train.fold,
                    type = 'C-classification',
-                   kernel = 'linear')
+                   kernel = 'radial')
   # using svm.model to predict the test.fold
   pred.model = predict(svm.models, newdata = test.fold[-8])
-  check.table = table(test.fold[, 8], pred.model)
-  accuracy = (check.table[1,1] + check.table[2,2]) / (check.table[1,1] + check.table[2,2] + check.table[1,2] + check.table[2,1])
-  return(accuracy)
+  confus.mat <- confusionMatrix(pred.model, reference = test.fold[,8])
+  return(matrix(data = c(confus.mat$overall[1], confus.mat$byClass[1], confus.mat$byClass[2])))
 })
-accuracy = mean(as.numeric(cv))
-accuracy # 0.682598
+### turn the list into vector
+svm.pre.result <- unlist(cv)
+svm.pre.acc <- sum(svm.pre.result[seq(1, 30, by = 3)])/10 # 0.6917
+svm.pre.sensi <- sum(svm.pre.result[seq(2, 30, by = 3)])/10 # 0.7444
+svm.pre.speci <- sum(svm.pre.result[seq(3, 30, by = 3)])/10 # 0.6357
 
 # what if sweap religion scores out of the predictive features
-feature.weight <- rep(NA,7)
+feature.weight <- matrix(data = NA, nrow = 7, ncol = 3)
+colnames(feature.weight) <- c('accuracy', 'sensitive', 'specific')
 for (i in 1:7) {
   drug.svm.data2 <- drug.svm.data[,-i]
   folds = createFolds(drug.svm.data2$cluster, k = 10)
   cv = lapply(folds, function(x) { 
-    train.fold = drug.svm.data2[-x, ]
-    test.fold = drug.svm.data2[x, ]
+    # separating apart the training & testing set
+    train.fold = drug.svm.data[-x, ]
+    test.fold = drug.svm.data[x, ]
+    # applying the classifer on the train.fold
     svm.models = svm(formula = cluster ~ .,
                      data = train.fold,
                      type = 'C-classification',
-                     kernel = 'linear')
-    pred.model = predict(svm.models, newdata = test.fold[-7])
-    check.table = table(test.fold[, 7], pred.model)
-    accuracy = (check.table[1,1] + check.table[2,2]) / (check.table[1,1] + check.table[2,2] + check.table[1,2] + check.table[2,1])
-    return(accuracy)
+                     kernel = 'radial')
+    # using svm.model to predict the test.fold
+    pred.model = predict(svm.models, newdata = test.fold[-8])
+    confus.mat <- confusionMatrix(pred.model, reference = test.fold[,8])
+    return(matrix(data = c(confus.mat$overall[1], confus.mat$byClass[1], confus.mat$byClass[2])))
   })
-  feature.weight[i] <- mean(as.numeric(cv))
+  # turn the list into vector
+  svm.pre.result <- unlist(cv)
+  feature.weight[i, 1] <- sum(svm.pre.result[seq(1, 30, by = 3)])/10
+  feature.weight[i, 2] <- sum(svm.pre.result[seq(2, 30, by = 3)])/10
+  feature.weight[i, 3] <- sum(svm.pre.result[seq(3, 30, by = 3)])/10
 }
-feature.weight # 0.6776961 0.6665931 0.5890196 0.6073775 0.6806618 0.6772059 0.6700000
+# checking results
+feature.weight
+  
