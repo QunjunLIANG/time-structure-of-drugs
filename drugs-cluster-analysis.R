@@ -234,6 +234,10 @@ drug.kmean <- kmeans(drug.scale[,10:14], centers = 2)
 plotcluster(drug.scale, drug.kmean$cluster) 
 drug.data['cluster'] <- ztpi.clust[["Best.partition"]]
 
+barplot(table(ztpi.clust$Best.nc[1,]),
+        xlab = 'number of cluster', ylab = 'number of criteria',
+        main = 'number of cluster chosen')
+
 ### Descriptive statistics of clustering result
 drug.cluster.describe <- data.frame(as.factor(drug.data$Marriage), as.factor(drug.data$Education), as.factor(drug.data$Job), drug.data[,20])
 colnames(drug.cluster.describe) <- c('marriage', 'education', 'job', 'cluster')
